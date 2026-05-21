@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KTW认证流程管理 - 迪恩认证</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1a365d, #2c5282);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 12px;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .process-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .step-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 5px solid #3182ce;
+            transition: all 0.3s;
+        }
+        
+        .step-card:hover {
+            transform: translateX(5px);
+        }
+
+        .step-card.completed {
+            border-left-color: #38a169;
+            opacity: 0.85;
+        }
+
+        .step-card.completed .step-number {
+            background: linear-gradient(135deg, #38a169, #276749);
+        }
+
+        .step-card.in-progress {
+            border-left-color: #d69e2e;
+        }
+
+        .step-card.in-progress .step-number {
+            background: linear-gradient(135deg, #d69e2e, #975a16);
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #3182ce, #2c5282);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-title {
+            flex: 1;
+        }
+        
+        .step-title h2 {
+            color: #1a365d;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .step-meta {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 状态按钮 */
+        .status-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            user-select: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+
+        .status-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .status-btn:active {
+            transform: scale(0.95);
+        }
+
+        .status-btn.pending {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .status-btn.in-progress {
+            background: #d69e2e;
+            color: white;
+        }
+
+        .status-btn.completed {
+            background: #38a169;
+            color: white;
+        }
+
+        .status-btn .btn-icon {
+            margin-right: 6px;
+        }
+        
+        .step-content {
+            margin-bottom: 20px;
+        }
+        
+        .step-content h3 {
+            color: #2c5282;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        
+        .file-list {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .file-list h4 {
+            color: #1a365d;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .file-list ul {
+            list-style: none;
+        }
+        
+        .file-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        
+        .file-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .file-list li::before {
+            content: "•";
+            position: absolute;
+            left: 8px;
+            color: #3182ce;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* 文件下载链接样式 */
+        .file-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #2c5282;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .file-link:hover {
+            background: #ebf8ff;
+            border-color: #3182ce;
+            transform: translateX(3px);
+        }
+
+        .file-link .file-icon {
+            font-size: 1.5rem;
+        }
+
+        .file-link .file-info {
+            flex: 1;
+        }
+
+        .file-link .file-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .file-link .file-desc {
+            font-size: 0.8rem;
+            color: #718096;
+        }
+
+        .file-link .download-icon {
+            font-size: 1.2rem;
+            color: #3182ce;
+        }
+        
+        .file-location {
+            background: #edf2f7;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+        
+        .file-location strong {
+            color: #2c5282;
+        }
+
+        /* 完成标记 */
+        .completed-overlay {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 2rem;
+        }
+
+        .step-card.completed .completed-overlay {
+            display: block;
+        }
+        
+        .status-tracker {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .status-tracker h2 {
+            color: #1a365d;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .tracker-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .tracker-table th,
+        .tracker-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .tracker-table th {
+            background: #1a365d;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .tracker-table tr:hover {
+            background: #f7fafc;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        .status-progress {
+            background: #feebc8;
+            color: #c05621;
+        }
+        
+        .status-complete {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        /* 进度条 */
+        .progress-bar-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .progress-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar-header h3 {
+            color: #1a365d;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar-header span {
+            color: #2c5282;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38a169, #48bb78);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .progress-step-label {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            text-align: center;
+            width: 16%;
+        }
+
+        .progress-step-label.done {
+            color: #38a169;
+            font-weight: 600;
+        }
+
+        .progress-step-label.active {
+            color: #d69e2e;
+            font-weight: 600;
+        }
+        
+        .notes-section {
+            background: #fffaf0;
+            border-left: 4px solid #ed8936;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 8px;
+        }
+        
+        .notes-section h3 {
+            color: #c05621;
+            margin-bottom: 15px;
+        }
+        
+        .notes-section ul {
+            margin-left: 20px;
+        }
+        
+        .notes-section li {
+            margin-bottom: 10px;
+            color: #744210;
+        }
+
+        /* 重置按钮 */
+        .reset-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 10px 30px;
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            margin-top: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .step-header {
+                flex-wrap: wrap;
+            }
+            .status-btn {
+                margin-top: 10px;
+                width: 100%;
+                text-align: center;
+            }
+            .step-meta {
+                flex-direction: column;
+                gap: 5px;
+            }
+            header h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media print {
+            .step-card {
+                break-inside: avoid;
+            }
+            .status-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KTW认证流程管理</h1>
+            <p>德国塑料与橡胶材料认证 - 完整流程指南</p>
+        </header>
+        <a href="services.html" class="back-link">← 返回服务项目</a>
+
+        <!-- 总进度条 -->
+        <div class="progress-bar-container">
+            <div class="progress-bar-header">
+                <h3>📋 总体进度</h3>
+                <span id="progressText">0 / 6 步已完成</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-steps">
+                <div class="progress-step-label" id="pLabel1">步骤1</div>
+                <div class="progress-step-label" id="pLabel2">步骤2</div>
+                <div class="progress-step-label" id="pLabel3">步骤3</div>
+                <div class="progress-step-label" id="pLabel4">步骤4</div>
+                <div class="progress-step-label" id="pLabel5">步骤5</div>
+                <div class="progress-step-label" id="pLabel6">步骤6</div>
+            </div>
+        </div>
+        
+        <div class="process-flow">
+            <!-- Step 1 -->
+            <div class="step-card" id="step1">
+                <div class="completed-overlay">✅</div>
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">
+                        <h2>签订合同与资料收集</h2>
+                        <div class="step-meta">
+                            <span>👤 负责人：业务人员</span>
+                        </div>
+                    </div>
+                    <button class="status-btn pending" onclick="toggleStatus(1)">
+                        <span class="btn-icon">🔴</span> 待开始
+                    </button>
+                </div>
+                <div class="step-content">
+                    <h3>操作内容</h3>
+                    <p>与客户签订KTW认证服务合同，收集产品基本信息和技术资料。</p>
+                </div>
+                <div class="file-list">
+                    <h4>📁 所需文件清单</h4>
+                    <ul>
+                        <li>KTW认证服务合同</li>
+                        <li>产品清单（含产品名称、型号、规格）</li>
+                        <li>产品图纸（结构图、尺寸图）</li>
+                        <li>产品使用说明</li>
+                    </ul>
+                    <h4 style="margin-top: 20px;">📎 模板文件下载</h4>
+                    <a class="file-link" href="ktw-files/申请表.doc" download>
+                        <span class="file-icon">📝</span>
+                        <div class="file-info">
+                            <div class="file-name">Application Form for Product Certification</div>
+                            <div class="file-desc">产品认证/测试申请表模板</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/认证服务合同.pdf" download>
+                        <span class="file-icon">📋</span>
+                        <div class="file-info">
+                            <div class="file-name">多国认证主证服务合同</div>
+                            <div class="file-desc">浙江德利福科技股份有限公司 - 认证服务合同模板</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/客户样品资料.pdf" download>
+                        <span class="file-icon">📦</span>
+                        <div class="file-info">
+                            <div class="file-name">客户样品资料</div>
+                            <div class="file-desc">认证用样品资料模板</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <div class="file-location">
+                        <strong>文件存放位置：</strong>合同文件夹 / 产品资料文件夹
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="step-card" id="step2">
+                <div class="completed-overlay">✅</div>
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">
+                        <h2>现场抽样安排</h2>
+                        <div class="step-meta">
+                            <span>👤 负责人：项目专员</span>
+                        </div>
+                    </div>
+                    <button class="status-btn pending" onclick="toggleStatus(2)">
+                        <span class="btn-icon">🔴</span> 待开始
+                    </button>
+                </div>
+                <div class="step-content">
+                    <h3>操作内容</h3>
+                    <p>联系认证实验室，安排现场抽样日期，准备抽样所需条件。</p>
+                </div>
+                <div class="file-list">
+                    <h4>📁 所需文件清单</h4>
+                    <ul>
+                        <li>验厂通知文件</li>
+                        <li>抽样准备材料清单</li>
+                        <li>设备清单及校准证书</li>
+                        <li>生产流程说明</li>
+                    </ul>
+                    <h4 style="margin-top: 20px;">📎 验厂资料下载</h4>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/1. 工厂信息表/请英文填写这一版 AU_TP_159_efcpa-msa-technical-audit-factory-profile_1.1 (1).xlsx" download>
+                        <span class="file-icon">🏭</span>
+                        <div class="file-info">
+                            <div class="file-name">工厂信息表（英文版）</div>
+                            <div class="file-desc">请英文填写 - AU_TP_159</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/1. 工厂信息表/中文版供参考-AU_TP_159_efcpa-msa-technical-audit-factory-profile_1.1 (1).xlsx" download>
+                        <span class="file-icon">🏭</span>
+                        <div class="file-info">
+                            <div class="file-name">工厂信息表（中文参考版）</div>
+                            <div class="file-desc">仅供中文参考，需要填写英文版</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/3. 审计议程 Eurofins_DWIP_Audit agenda_UBA_V1.docx" download>
+                        <span class="file-icon">📅</span>
+                        <div class="file-info">
+                            <div class="file-name">Eurofins审计议程</div>
+                            <div class="file-desc">DWIP Audit agenda_UBA_V1</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/4. 工厂信函，需签字盖章 QA_TP_017_efcpa_Code of Ethics_Factory Letter_1.2_Chinese.pdf" download>
+                        <span class="file-icon">📝</span>
+                        <div class="file-info">
+                            <div class="file-name">工厂信函（需签字盖章）</div>
+                            <div class="file-desc">Code of Ethics - QA_TP_017 中文版</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/5. QA_PR_008_efcpa_Code of Ethics_1.0 Chinese.pdf" download>
+                        <span class="file-icon">📄</span>
+                        <div class="file-info">
+                            <div class="file-name">道德准则文件</div>
+                            <div class="file-desc">Code of Ethics - QA_PR_008 中文版</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <div class="file-location">
+                        <strong>文件存放位置：</strong>德利福 KTW验厂资料 文件夹
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3 -->
+            <div class="step-card" id="step3">
+                <div class="completed-overlay">✅</div>
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">
+                        <h2>现场抽样</h2>
+                        <div class="step-meta">
+                            <span>👤 负责人：技术专员</span>
+                        </div>
+                    </div>
+                    <button class="status-btn pending" onclick="toggleStatus(3)">
+                        <span class="btn-icon">🔴</span> 待开始
+                    </button>
+                </div>
+                <div class="step-content">
+                    <h3>操作内容</h3>
+                    <p>实验室人员到现场进行样品抽取，记录抽样过程。</p>
+                </div>
+                <div class="file-list">
+                    <h4>📁 所需文件清单</h4>
+                    <ul>
+                        <li>抽样记录表</li>
+                        <li>现场抽样照片</li>
+                        <li>样品标签及封存记录</li>
+                    </ul>
+                    <h4 style="margin-top: 20px;">📎 抽样单下载</h4>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/2. 抽样单/Sampling Report_DWIP_v2.2_CW510L body_Delifu.docx" download>
+                        <span class="file-icon">📋</span>
+                        <div class="file-info">
+                            <div class="file-name">抽样单 - CW510L</div>
+                            <div class="file-desc">Sampling Report - CW510L body</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/验厂资料/德利福 KTW验厂资料/2. 抽样单/Sampling Report_DWIP_v2.2_CW617N body_Delifu.docx" download>
+                        <span class="file-icon">📋</span>
+                        <div class="file-info">
+                            <div class="file-name">抽样单 - CW617N</div>
+                            <div class="file-desc">Sampling Report - CW617N body</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <a class="file-link" href="ktw-files/现场抽样准备.docx" download>
+                        <span class="file-icon">📦</span>
+                        <div class="file-info">
+                            <div class="file-name">现场抽样准备资料</div>
+                            <div class="file-desc">徳利福KTW-BWGL现场抽样准备清单</div>
+                        </div>
+                        <span class="download-icon">⬇️</span>
+                    </a>
+                    <div class="file-location">
+                        <strong>文件存放位置：</strong>德利福 KTW验厂资料 / 抽样单文件夹
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4 -->
+            <div class="step-card" id="step4">
+                <div class="completed-overlay">✅</div>
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">
+                        <h2>样品测试</h2>
+                        <div class="step-meta">
+                            <span>👤 负责人：实验室</span>
+                        </div>
+                    </div>
+                    <button class="status-btn pending" onclick="toggleStatus(4)">
+                        <span class="btn-icon">🔴</span> 待开始
+                    </button>
+                </div>
+                <div class="step-content">
+                    <h3>操作内容</h3>
+                    <p>实验室按照KTW标准对样品进行全面测试，包括迁移测试、感官测试等。</p>
+                </div>
+                <div class="file-list">
+                    <h4>📁 所需文件清单</h4>
+                    <ul>
+                        <li>测试报告（正式版）</li>
+                        <li>原始测试数据</li>
+                        <li>测试过程记录</li>
+                    </ul>
+                    <div class="file-location">
+                        <strong>文件存放位置：</strong>测试报告文件夹
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 5 -->
+            <div class="step-card" id="step5">
+                <div class="completed-overlay">✅</div>
+                <div class="step-header">
+                    <div class="step-number">5</div>
+                    <div class="step-title">
+                        <h2>资料审核</h2>
+                        <div class="step-meta">
+                            <span>👤 负责人：技术专员</span>
+                        </div>
+                    </div>
+                    <button class="status-btn pending" onclick="toggleStatus(5)">
+                        <span class="btn-icon">🔴</span> 待开始
+                    </button>
+                </div>
+                <div class="step-content">
+                    <h3>操作内容</h3>
+                    <p>提交完整技术文件包进行审核，包括材料成分、工艺流程等。</p>
+                </div>
+                <div class="file-list">
+                    <h4>📁 所需文件清单</h4>
+                    <ul>
+                        <li>材料成分表（BOM）</li>
+                        <li>生产工艺流程图</li>
+                        <li>MSDS安全数据表</li>
+                        <li>原材料供应商资料</li>
+                        <li>质量管理体系文件</li>
+                    </ul>
+                    <div class="file-location">
+                        <strong>文件存放位置：</strong>技术资料文件夹
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 6 -->
+            <div class="step-card" id="step6">
+                <div class="completed-overlay">✅</div>
+                <div class="step-header">
+                    <div class="step-number">6</div>
+                    <div class="step-title">
+                        <h2>证书颁发</h2>
+                        <div class="step-meta">
+                            <span>👤 负责人：项目专员</span>
+                        </div>
+                    </div>
+                    <button class="status-btn pending" onclick="toggleStatus(6)">
+                        <span class="btn-icon">🔴</span> 待开始
+                    </button>
+                </div>
+                <div class="step-content">
+                    <h3>操作内容</h3>
+                    <p>审核通过后，正式颁发KTW认证证书。</p>
+                </div>
+                <div class="file-list">
+                    <h4>📁 所需文件清单</h4>
+                    <ul>
+                        <li>KTW认证证书（原件）</li>
+                        <li>证书使用指南</li>
+                    </ul>
+                    <div class="file-location">
+                        <strong>文件存放位置：</strong>证书文件夹
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Tracker -->
+        <div class="status-tracker">
+            <h2>📊 流程跟踪表</h2>
+            <table class="tracker-table">
+                <thead>
+                    <tr>
+                        <th>步骤</th>
+                        <th>计划完成时间</th>
+                        <th>实际完成时间</th>
+                        <th>负责人</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="row1">
+                        <td>1. 签订合同与资料收集</td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="text" placeholder="填写负责人" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; width:100px;"></td>
+                        <td><span class="status-badge status-pending" id="badge1">待开始</span></td>
+                    </tr>
+                    <tr id="row2">
+                        <td>2. 现场抽样安排</td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="text" placeholder="填写负责人" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; width:100px;"></td>
+                        <td><span class="status-badge status-pending" id="badge2">待开始</span></td>
+                    </tr>
+                    <tr id="row3">
+                        <td>3. 现场抽样</td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="text" placeholder="填写负责人" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; width:100px;"></td>
+                        <td><span class="status-badge status-pending" id="badge3">待开始</span></td>
+                    </tr>
+                    <tr id="row4">
+                        <td>4. 样品测试</td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="text" placeholder="填写负责人" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; width:100px;"></td>
+                        <td><span class="status-badge status-pending" id="badge4">待开始</span></td>
+                    </tr>
+                    <tr id="row5">
+                        <td>5. 资料审核</td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="text" placeholder="填写负责人" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; width:100px;"></td>
+                        <td><span class="status-badge status-pending" id="badge5">待开始</span></td>
+                    </tr>
+                    <tr id="row6">
+                        <td>6. 证书颁发</td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="date" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px;"></td>
+                        <td><input type="text" placeholder="填写负责人" style="border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; width:100px;"></td>
+                        <td><span class="status-badge status-pending" id="badge6">待开始</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="reset-btn" onclick="resetAll()">🔄 重置所有状态</button>
+        </div>
+        
+        <!-- Notes -->
+        <div class="notes-section">
+            <h3>⚠️ 注意事项</h3>
+            <ul>
+                <li>点击每个步骤右侧的 <strong>状态按钮</strong> 可以切换状态：待开始 → 进行中 → 已完成</li>
+                <li>状态会自动保存，下次打开页面时会恢复</li>
+                <li>下方跟踪表可以填写计划时间、实际完成时间和负责人</li>
+                <li>步骤1的模板文件可以直接点击下载使用</li>
+                <li>如需添加更多模板文件，请把文件发给solo，会帮您添加</li>
+
+            </ul>
+        </div>
+        
+        <footer>
+            <p>© 2024 迪恩认证 | KTW认证流程管理手册</p>
+            <p>如有疑问，请联系：651716077@qq.com</p>
+        </footer>
+    </div>
+
+    <script>
+        // 状态配置
+        const STATUS_CONFIG = {
+            0: { class: 'pending', text: '🔴 待开始', badgeClass: 'status-pending', badgeText: '待开始' },
+            1: { class: 'in-progress', text: '🟡 进行中', badgeClass: 'status-progress', badgeText: '进行中' },
+            2: { class: 'completed', text: '🟢 已完成', badgeClass: 'status-complete', badgeText: '已完成' }
+        };
+
+        // 从localStorage读取状态
+        function loadStatus() {
+            const saved = localStorage.getItem('ktw_status');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        }
+
+        // 保存状态到localStorage
+        function saveStatus(statuses) {
+            localStorage.setItem('ktw_status', JSON.stringify(statuses));
+        }
+
+        // 切换状态
+        function toggleStatus(step) {
+            const statuses = loadStatus();
+            statuses[step] = (statuses[step] + 1) % 3;
+            saveStatus(statuses);
+            updateUI(statuses);
+        }
+
+        // 更新界面
+        function updateUI(statuses) {
+            let completedCount = 0;
+
+            for (let i = 1; i <= 6; i++) {
+                const status = statuses[i];
+                const config = STATUS_CONFIG[status];
+                const card = document.getElementById('step' + i);
+                const btn = card.querySelector('.status-btn');
+                const badge = document.getElementById('badge' + i);
+                const pLabel = document.getElementById('pLabel' + i);
+
+                // 更新按钮
+                btn.className = 'status-btn ' + config.class;
+                btn.innerHTML = '<span class="btn-icon">' + config.text.split(' ')[0] + '</span> ' + config.text.split(' ')[1];
+
+                // 更新卡片样式
+                card.classList.remove('completed', 'in-progress');
+                if (status === 2) {
+                    card.classList.add('completed');
+                    completedCount++;
+                } else if (status === 1) {
+                    card.classList.add('in-progress');
+                }
+
+                // 更新跟踪表badge
+                badge.className = 'status-badge ' + config.badgeClass;
+                badge.textContent = config.badgeText;
+
+                // 更新进度条标签
+                pLabel.classList.remove('done', 'active');
+                if (status === 2) {
+                    pLabel.classList.add('done');
+                } else if (status === 1) {
+                    pLabel.classList.add('active');
+                }
+            }
+
+            // 更新进度条
+            const percent = Math.round((completedCount / 6) * 100);
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = completedCount + ' / 6 步已完成';
+        }
+
+        // 重置所有状态
+        function resetAll() {
+            if (confirm('确定要重置所有步骤的状态吗？')) {
+                const statuses = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+                saveStatus(statuses);
+                updateUI(statuses);
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const statuses = loadStatus();
+            updateUI(statuses);
+        });
+    </script>
+</body>
+</html>
