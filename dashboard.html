@@ -304,95 +304,68 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
     <script>
-        // Firebase配置
-        const firebaseConfig = {
-            apiKey: "AIzaSyBnBZvO866eyjQXMjbE53piCQ42m2BufQ4",
-            authDomain: "dien-certification.firebaseapp.com",
-            projectId: "dien-certification",
-            storageBucket: "dien-certification.firebasestorage.app",
-            messagingSenderId: "236272140746",
-            appId: "1:236272140746:web:126b0c05fefbecf1e88f33"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        
-        let currentUser = null;
-        let currentUserData = null;
-        
+        // 用户数据
+        const USERS = [
+            { id: '1', email: 'admin@dien.com', password: 'admin123', name: '系统管理员', role: 'admin' },
+            { id: '2', email: 'manager@dien.com', password: 'manager123', name: '业务经理', role: 'admin' },
+            { id: '3', email: 'user1@dien.com', password: 'user123', name: '张三', role: 'user' },
+            { id: '4', email: 'user2@dien.com', password: 'user123', name: '李四', role: 'user' },
+            { id: '5', email: 'user3@dien.com', password: 'user123', name: '王五', role: 'user' },
+            { id: '6', email: 'user4@dien.com', password: 'user123', name: '赵六', role: 'user' },
+            { id: '7', email: 'user5@dien.com', password: 'user123', name: '孙七', role: 'user' },
+            { id: '8', email: 'user6@dien.com', password: 'user123', name: '周八', role: 'user' },
+            { id: '9', email: 'user7@dien.com', password: 'user123', name: '吴九', role: 'user' },
+            { id: '10', email: 'user8@dien.com', password: 'user123', name: '郑十', role: 'user' }
+        ];
+
         // 检查登录状态
-        auth.onAuthStateChanged(function(user) {
-            if (!user) {
-                window.location.href = 'auth.html';
-                return;
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            window.location.href = 'auth.html';
+        } else {
+            // 显示用户信息
+            updateUI();
+            
+            // 如果是管理员，加载用户列表
+            if (currentUser.role === 'admin') {
+                loadUsersList();
             }
             
-            currentUser = user;
-            loadUserData(user.uid);
-        });
-        
-        // 加载用户数据
-        function loadUserData(uid) {
-            db.collection('users').doc(uid).get()
-                .then(function(doc) {
-                    if (doc.exists) {
-                        currentUserData = doc.data();
-                        updateUI();
-                        
-                        if (currentUserData.role === 'admin') {
-                            loadUsersList();
-                        }
-                    }
-                    
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                })
-                .catch(function(error) {
-                    console.error('加载用户数据失败:', error);
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                });
+            // 隐藏加载遮罩
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
         
         // 更新界面
         function updateUI() {
-            document.getElementById('userName').textContent = currentUserData.name;
-            document.getElementById('welcomeName').textContent = currentUserData.name;
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('welcomeName').textContent = currentUser.name;
             document.getElementById('userRole').textContent = 
-                currentUserData.role === 'admin' ? '管理员' : '普通用户';
+                currentUser.role === 'admin' ? '管理员' : '普通用户';
             
-            if (currentUserData.role === 'admin') {
+            if (currentUser.role === 'admin') {
                 document.getElementById('adminSection').classList.add('show');
             }
         }
         
         // 加载用户列表（管理员）
         function loadUsersList() {
-            db.collection('users').get()
-                .then(function(snapshot) {
-                    const tbody = document.getElementById('usersTableBody');
-                    tbody.innerHTML = '';
-                    
-                    snapshot.forEach(function(doc) {
-                        const user = doc.data();
-                        const isCurrentUser = doc.id === currentUser.uid;
-                        
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = 
-                            '<td>' + user.name + '</td>' +
-                            '<td>' + user.email + '</td>' +
-                            '<td><span class="role-badge ' + (user.role === 'admin' ? 'role-admin' : 'role-user') + '">' + 
-                                (user.role === 'admin' ? '管理员' : '普通用户') + '</span></td>' +
-                            '<td>' + getActionButtons(doc.id, user.role, isCurrentUser) + '</td>';
-                        
-                        tbody.appendChild(tr);
-                    });
-                });
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            USERS.forEach(function(user) {
+                const isCurrentUser = user.id === currentUser.id;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = 
+                    '<td>' + user.name + '</td>' +
+                    '<td>' + user.email + '</td>' +
+                    '<td><span class="role-badge ' + (user.role === 'admin' ? 'role-admin' : 'role-user') + '">' + 
+                        (user.role === 'admin' ? '管理员' : '普通用户') + '</span></td>' +
+                    '<td>' + getActionButtons(user.id, user.role, isCurrentUser) + '</td>';
+                
+                tbody.appendChild(tr);
+            });
         }
         
         // 获取操作按钮
@@ -413,36 +386,28 @@
         function setUserRole(uid, role) {
             if (!confirm('确定要修改该用户的角色吗？')) return;
             
-            db.collection('users').doc(uid).update({ role: role })
-                .then(function() {
-                    loadUsersList();
-                })
-                .catch(function(error) {
-                    alert('操作失败：' + error.message);
-                });
+            const user = USERS.find(u => u.id === uid);
+            if (user) {
+                user.role = role;
+                loadUsersList();
+            }
         }
         
         // 删除用户
         function deleteUser(uid) {
             if (!confirm('确定要删除该用户吗？此操作不可恢复！')) return;
             
-            // 注意：这里只能删除数据库记录，无法删除Firebase Auth账号
-            // 需要云函数才能完全删除
-            db.collection('users').doc(uid).delete()
-                .then(function() {
-                    alert('用户已删除（数据库记录）');
-                    loadUsersList();
-                })
-                .catch(function(error) {
-                    alert('删除失败：' + error.message);
-                });
+            const index = USERS.findIndex(u => u.id === uid);
+            if (index > -1) {
+                USERS.splice(index, 1);
+                loadUsersList();
+            }
         }
         
         // 退出登录
         function logout() {
-            auth.signOut().then(function() {
-                window.location.href = 'auth.html';
-            });
+            localStorage.removeItem('currentUser');
+            window.location.href = 'auth.html';
         }
     </script>
 </body>

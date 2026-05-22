@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KTW认证流程管理 - 迪恩认证</title>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1027,55 +1024,38 @@
     </div>
 
     <script>
-        // Firebase配置
-        const firebaseConfig = {
-            apiKey: "AIzaSyBnBZvO866eyjQXMjbE53piCQ42m2BufQ4",
-            authDomain: "dien-certification.firebaseapp.com",
-            projectId: "dien-certification",
-            storageBucket: "dien-certification.firebasestorage.app",
-            messagingSenderId: "236272140746",
-            appId: "1:236272140746:web:126b0c05fefbecf1e88f33"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
+        // localStorage 存储键名前缀
+        const STORAGE_PREFIX = 'ktw_sheets_';
+        let STORAGE_KEY = '';
+        
         let currentUser = null;
         let currentSheet = 0;
         let sheetsData = null;
 
         // 检查登录状态
-        auth.onAuthStateChanged(function(user) {
-            if (!user) {
+        function checkAuth() {
+            const userStr = localStorage.getItem('currentUser');
+            if (!userStr) {
                 window.location.href = 'auth.html';
-                return;
+                return false;
             }
-            currentUser = user;
-            loadUserData(user.uid);
-        });
-
-        // 加载用户数据
-        function loadUserData(uid) {
-            db.collection('users').doc(uid).get()
-                .then(function(doc) {
-                    if (doc.exists) {
-                        const userData = doc.data();
-                        document.getElementById('userName').textContent = userData.name || userData.email;
-                    }
-                    // 加载sheets数据
-                    loadSheetsFromFirestore();
-                })
-                .catch(function(error) {
-                    console.error('加载用户数据失败:', error);
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                });
+            try {
+                currentUser = JSON.parse(userStr);
+                // 设置存储键名
+                STORAGE_KEY = STORAGE_PREFIX + currentUser.username;
+                // 显示用户名
+                document.getElementById('userName').textContent = currentUser.name || currentUser.username;
+                return true;
+            } catch (e) {
+                window.location.href = 'auth.html';
+                return false;
+            }
         }
 
         // 退出登录
         function logout() {
-            auth.signOut().then(function() {
-                window.location.href = 'auth.html';
-            });
+            localStorage.removeItem('currentUser');
+            window.location.href = 'auth.html';
         }
 
         // 状态配置
@@ -1094,32 +1074,23 @@
             '证书颁发'
         ];
 
-        // 从Firestore加载所有sheet数据
-        function loadSheetsFromFirestore() {
-            if (!currentUser) return;
-
-            db.collection('users').doc(currentUser.uid).collection('ktw').doc('sheets').get()
-                .then(function(doc) {
-                    if (doc.exists) {
-                        sheetsData = doc.data().data || getDefaultSheets();
-                    } else {
-                        sheetsData = getDefaultSheets();
-                        // 创建初始数据
-                        saveSheetsToFirestore();
-                    }
-                    renderTabs();
-                    renderSheetContent();
-                    updateStepCards();
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                })
-                .catch(function(error) {
-                    console.error('加载数据失败:', error);
+        // 从localStorage加载所有sheet数据
+        function loadSheetsFromStorage() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    sheetsData = JSON.parse(stored);
+                } catch (e) {
                     sheetsData = getDefaultSheets();
-                    renderTabs();
-                    renderSheetContent();
-                    updateStepCards();
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                });
+                }
+            } else {
+                sheetsData = getDefaultSheets();
+                saveSheetsToStorage();
+            }
+            renderTabs();
+            renderSheetContent();
+            updateStepCards();
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         // 获取默认sheets数据
@@ -1133,17 +1104,10 @@
             ];
         }
 
-        // 保存sheets数据到Firestore
-        function saveSheetsToFirestore() {
-            if (!currentUser || !sheetsData) return;
-
-            db.collection('users').doc(currentUser.uid).collection('ktw').doc('sheets').set({
-                data: sheetsData,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .catch(function(error) {
-                console.error('保存数据失败:', error);
-            });
+        // 保存sheets数据到localStorage
+        function saveSheetsToStorage() {
+            if (!sheetsData) return;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sheetsData));
         }
 
         // 兼容旧代码的loadSheets函数
@@ -1157,7 +1121,7 @@
         // 兼容旧代码的saveSheets函数
         function saveSheets(sheets) {
             sheetsData = sheets;
-            saveSheetsToFirestore();
+            saveSheetsToStorage();
         }
 
         // 渲染标签页
@@ -1331,6 +1295,13 @@
                 renderSheetContent();
             }
         }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            if (checkAuth()) {
+                loadSheetsFromStorage();
+            }
+        });
 
     </script>
 </body>
